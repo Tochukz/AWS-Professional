@@ -38,6 +38,7 @@ __Introduction__
 * Pay for the amount of data going through Firehose
 * Spark / Kinesis Client Library (KCL) do not read from Kinesis Data Firehose, they only read from Kinesis Data Stream
 
+__Note__: Kinesis Data Firehose is now called _Amazon Data Firehose_.  
 ![](slides/kinesis-data-firehose-delivery-diagram.png)
 
 __Firehose Buffer Sizing__  
@@ -45,6 +46,7 @@ __Firehose Buffer Sizing__
 * The buffer is flushed based on time and size rules
 * Buffer Size (ex: 32MB): if that buffer size is reached, it’s flushed
 * Buffer Time (ex: 2 minutes): if that time is reached, it’s flushed
+* Minimum Buffer Time is 1 minute
 * Firehose can automatically increase the buffer size to increase throughput
 * High throughput => Buffer Size will be hit
 * Low throughput => Buffer Time will be hit
@@ -62,3 +64,16 @@ __Kinesis Data Streams vs Firehose__
   - Near real time
   - Automated Scaling
   - No data storage
+
+### Amazon Managed Service for Apache Flink
+* Previously named: _Kinesis Data Analytics for Apache Flink_
+* Flink (Java, Scala or SQL) is a framework for processing data streams
+![](slides/apache-flink.png)
+* Run any Apache Flink application on a managed cluster on AWS
+* Provisioned compute resources, parallel computation, automatic scaling
+* Application backups (implemented as checkpoints and snapshots)
+* Use any Apache Flink programming features to transform data
+* __Important__: Flink does not read from Amazon Data Firehose
+
+### Streaming Architectures
+![](slides/streaming-architectures.png)  
