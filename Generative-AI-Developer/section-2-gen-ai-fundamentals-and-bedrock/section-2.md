@@ -63,3 +63,7 @@ __Amazon Bedrock: Model Access__
 * Amazon is phasing out the need to request access to specific models
 * Be sure to check pricing
   - https://aws.amazon.com/bedrock/pricing
+
+__Amazon Converse__  
+[Converse Rumtime API](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html)   
+[Converse Example](https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html)   
