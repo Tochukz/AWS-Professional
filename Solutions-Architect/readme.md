@@ -1,6 +1,6 @@
 # Udemy Course - AWS Certified Solution Architect Professional
 
-__By Stephane Maarek__
+__By Stephane Maarek__   
 
 __Content__  
 
