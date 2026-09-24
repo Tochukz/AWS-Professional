@@ -130,3 +130,64 @@ __“Continued Pre-Training”__
 {"input": "The grasshas riz."}
 {"input": "I wonder where the flowers is."}
 ```
+
+__Low-Rank Adaptation (LoRA)__  
+* We don’t update the entire model, just slap on some “low-rank matrices” to the attention weights (usually), and train those.
+  - “Low-rank” refers to the complexity of the underlying matrices in the model, but you don't need that level of understanding for this exam
+* At inference, these fine-tuned weights get added into the base model
+* Base model remains unchanged
+* Very efficient for storage, training and inference
+* This is different from an "adaptor layer" added to the top of a model
+
+__Retrieval Augmented Generation (RAG)__  
+* Like an open-book exam for LLMs
+* You query some external database for the answers instead of relying on the LLM
+* Then, work those answers into the prompt for the LLM to work with
+  - Or, use tools and functions to incorporate the search into the LLM in a slightly more principled way
+
+![RAG Example Approach](slides/rag-example-approach.png)
+
+__RAG: Pros__  
+* Faster & cheaper way to incorporate new or proprietary information into “GenAI” vs. fine-tuning
+* Updating info is just a matter of updating a database
+* Can leverage “semantic search” via vector stores
+* Can prevent “hallucinations” when you ask the model about something it wasn’t trained on
+* If your boss wants “AI search”, this is an easy way to deliver it.
+* Technically you aren’t “training” a model with this data
+
+__RAG: Cons__  
+* You have made the world’s most overcomplicated search engine
+* Very sensitive to the prompt templates you use to incorporate your data
+* Non-deterministic
+* It can still hallucinate
+* Very sensitive to the relevancy of the information you retrieve
+
+__Choosing a Database (Knowledge Base Data Store) for RAG__  
+* You could just use whatever database is appropriate for the type of data you are retrieving
+  - Graph database (i.e., Neo4j) for retrieving product recommendations or relationships between items
+  - Opensearch or something for traditional text search (TF/IDF)
+  - But almost every example you find of RAG uses a Vector database
+  - Note Elasticsearch / Opensearch can function as a vector DB
+
+
+__Embeddings__  
+* An embedding is just a big vector associated with your data
+* Think of it as a point in multi-dimensional space (typically 100s or thousands of dimensions)
+* Embeddings are computed such that items that are similar to each other are close to each other in that space
+* We can use embedding base models (like Titan) to compute them en masse
+* Embeddings are vectors, so store them in a vector database!
+* It just stores your data alongside their computed embedding vectors
+* Leverages the embeddings you might already have for ML
+* Retrieval looks like this:
+  - Compute an embedding vector for the thing you want to search for
+  - Query the vector database for the top items close to that vector
+  - You get back the top-N most similar things (K-Nearest Neighbor)
+  - “Vector search”
+* Examples of vector databases
+  - Coercing existing databases to do vector search
+    * Opensearch / Elasticsearch, SQL, Neptune, Redis, MongoDB, Cassandra
+  - Purpose-built vector DB’s
+    * Pinecone, Weaviate (commercial)
+    * Chroma, Marqo, Vespa, Qdrant, LanceDB, Milvus, vectordb (open source)
+
+![RAG Example with Vector Database](slides/rag-example-with-vector-database.png)

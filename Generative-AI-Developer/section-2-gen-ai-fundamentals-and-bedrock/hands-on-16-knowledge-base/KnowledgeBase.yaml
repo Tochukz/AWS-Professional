@@ -1,0 +1,221 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters: 
+  EmbeddingModelId:
+    Type: String     
+    Description: Bedrock embedding model ID
+    Default: "amazon.titan-embed-text-v2:0"
+  CollectionName:
+    Type: String    
+    Description: OpenSearch Serverless collection Name
+    Default: simple-vector-collection
+  VectorIndexName:
+    Type: String
+    Description: OpenSearch Serverless vector index name
+    Default: simple-vector-index 
+
+Resources: 
+  StorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: knowledge-base-storage-09-24
+
+  KnowledgeBaseRole: 
+    Type: AWS::IAM::Role 
+    Properties: 
+      RoleName: KnowledgeBaseRole 
+      Description: Role for KnowledgeBase
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17 
+        Statement: 
+          - Effect: Allow 
+            Action: sts:AssumeRole 
+            Principal: 
+              Service:  bedrock.amazonaws.com
+            Condition: 
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId 
+              ArnLike: 
+                AWS:SourceArn: !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*"
+      Policies: 
+        - PolicyName: KnowledgeBasePolicy
+          PolicyDocument:  
+            Version: 2012-10-17 
+            Statement: 
+              # - Sid: BaseModelAccess 
+              #   Action:                
+              #     - bedrock:ListFoundationModels
+              #     - bedrock:ListCustomModels
+              #     - bedrock:RetrieveAndGenerate # Permissions to chat with your document
+              #   Effect: Allow
+              #   Resource: "*" 
+              - Sid: InvokeModel 
+                Action: 
+                  - bedrock:InvokeModel
+                Effect: Allow 
+                Resource: 
+                  - !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/${EmbeddingModelId}"
+              - Sid: S3DataSourceList
+                Action: 
+                  - s3:ListBucket
+                Effect: Allow 
+                Resource: !GetAtt StorageBucket.Arn
+                Condition: 
+                  StringEquals: 
+                    AWS:ResourceAccount: !Ref AWS::AccountId
+              - Sid: S3DataSourceAccess 
+                Action: 
+                  - s3:GetObject
+                Effect: Allow 
+                Resource: !Sub "${StorageBucket.Arn}/*"
+                Condition: 
+                  StringEquals: 
+                    AWS:ResourceAccount: !Ref AWS::AccountId
+              - Sid: VectorStoreAccess # OpenSearchServerless access
+                Action: 
+                  - aoss:APIAccessAll
+                Effect: Allow 
+                Resource: 
+                  - !Sub "arn:aws:aoss:${AWS::Region}:${AWS::AccountId}:collection/${CollectionName}"
+
+  OpenSearchEncryptionPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Type: encryption
+      Name: simple-encryption-policy
+      Description: Simple encryption policy for the OpenSearch collection
+      Policy: !Sub |
+        {
+          "Rules": [
+            {
+              "ResourceType": "collection",
+              "Resource": ["collection/${CollectionName}"]
+            }
+          ],
+          "AWSOwnedKey": true
+        }
+
+  # OpenSearch Serverless Network Policy (Public access for simplicity; use VPC for production)
+  # For production, you should use VPC access and configure the network policy to allow only bedrock.amazonaws.com as a source service
+  OpenSearchNetworkPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Type: network
+      Name: simple-network-policy
+      Description: Simple network policy for the OpenSearch collection
+      Policy: !Sub |
+        [
+          {
+            "Rules": [
+              {
+                "ResourceType": "collection",
+                "Resource": ["collection/${CollectionName}"]
+              },
+              {
+                "ResourceType": "dashboard",
+                "Resource": ["collection/${CollectionName}"]
+              }
+            ],
+            "AllowFromPublic": true
+          }
+        ]
+
+  OpenSearchAccessPolicy:
+    Type: AWS::OpenSearchServerless::AccessPolicy
+    Properties:
+      Type: data
+      Name: simple-access-policy
+      Description: Simple access policy for the OpenSearch collection
+      Policy: !Sub |
+        [
+          {
+            "Description": "Access for Bedrock Knowledge Base role",
+            "Rules": [
+              {
+                "ResourceType": "index",
+                "Resource": ["index/${CollectionName}/*"],
+                "Permission": [
+                  "aoss:CreateIndex",
+                  "aoss:DescribeIndex",
+                  "aoss:ReadDocument",
+                  "aoss:WriteDocument",
+                  "aoss:UpdateIndex"
+                ]
+              },
+              {
+                "ResourceType": "collection",
+                "Resource": ["collection/${CollectionName}"],
+                "Permission": ["aoss:*"]
+              }
+            ],
+            "Principal": [
+              !GetAtt KnowledgeBaseRole.Arn
+            ]
+          }
+        ]
+
+
+  OpenSearchCollection: 
+    Type: AWS::OpenSearchServerless::Collection # OpenSearch Vector Store
+    DependsOn:
+      - OpenSearchEncryptionPolicy
+      - OpenSearchNetworkPolicy
+    Properties:
+      Name: simple-vector-collection
+      Type: VECTORSEARCH
+      Description: Vector store for Bedrock Knowledge Base
+
+  SimpleKnowledgeBase:  
+    Type: AWS::Bedrock::KnowledgeBase 
+    Properties: 
+      Name: SimpleBase
+      Description: A simple vector based knowledge base with S3 data source and Titan embedding model
+      RoleArn: !GetAtt KnowledgeBaseRole.Arn      
+      KnowledgeBaseConfiguration: 
+        Type: VECTOR # VECTOR | KENDRA | SQL | MANAGED
+        VectorKnowledgeBaseConfiguration: 
+          EmbeddingModelArn: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/${EmbeddingModelId}"
+      StorageConfiguration: 
+        Type: OPENSEARCH_SERVERLESS
+        OpensearchServerlessConfiguration: 
+          CollectionArn: !GetAtt OpenSearchCollection.Arn
+          VectorIndexName: !Ref VectorIndexName
+          FieldMapping:
+            VectorField: bedrock-knowledge-base-default-vector
+            TextField: AMAZON_BEDROCK_TEXT_CHUNK
+            MetadataField: AMAZON_BEDROCK_METADATA
+
+  KnowledgeBaseDataSource:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: S3DataSource
+      Description: S3 Data source
+      KnowledgeBaseId: !Ref SimpleKnowledgeBase
+      DataSourceConfiguration:
+        Type: S3
+        S3Configuration:
+          BucketArn: !GetAtt StorageBucket.Arn
+          InclusionPrefixes:
+            - base-data/
+      VectorIngestionConfiguration:
+        ChunkingConfiguration:
+          ChunkingStrategy: FIXED_SIZE
+          FixedSizeChunkingConfiguration:
+            MaxTokens: 300
+            OverlapPercentage: 20
+      DataDeletionPolicy: DELETE
+
+Outputs: 
+  KnowledgeBaseId:
+    Description: The ID of the Bedrock Knowledge Base
+    Value: !Ref SimpleKnowledgeBase
+    Export:
+      Name: !Sub '${AWS::StackName}-KnowledgeBaseId'
+  DataSourceId:
+    Description: The ID of the Bedrock Data Source
+    Value: !Ref KnowledgeBaseDataSource
+    Export:
+      Name: !Sub '${AWS::StackName}-DataSourceId'
+  KnowledgeBaseRoleArn:
+    Description: ARN of the Knowledge Base IAM Role
+    Value: !GetAtt KnowledgeBaseRole.Arn
