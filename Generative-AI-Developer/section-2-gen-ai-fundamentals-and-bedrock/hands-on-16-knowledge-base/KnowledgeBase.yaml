@@ -149,7 +149,7 @@ Resources:
               }
             ],
             "Principal": [
-              !GetAtt KnowledgeBaseRole.Arn
+              "${KnowledgeBaseRole.Arn}"
             ]
           }
         ]
@@ -167,6 +167,8 @@ Resources:
 
   SimpleKnowledgeBase:  
     Type: AWS::Bedrock::KnowledgeBase 
+    DependsOn:
+      - OpenSearchAccessPolicy
     Properties: 
       Name: SimpleBase
       Description: A simple vector based knowledge base with S3 data source and Titan embedding model

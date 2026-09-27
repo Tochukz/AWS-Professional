@@ -7,6 +7,12 @@ Here we create an underlying Vector Store for AWS Knowledge Base and query it fr
 **How it works**  
 
 ### Operation
+**Before Deployment**  
+To get the foundation model ARNs or Models IDs
+```bash
+$ aws bedrock list-foundation-models --query "modelSummaries[].[modelArn]" --output text > embedded-models.md
+```
+Select one foundation model ID to use for your `EmbeddingModelId` parameter.  A default is already provided in the template.  
 
 **Deployment**
 Lint the templates
@@ -14,25 +20,24 @@ Lint the templates
 ```bash
 $ cfn-lint KnowledgeBase.yaml
 ```
+Deploy the stack
 
-To get the foundation model ARNs 
 ```bash
-$ aws bedrock list-foundation-models --query "modelSummaries[].[modelArn]" --output text > embedded-models.md
+$ aws cloudformation deploy --template-file KnowledgeBase.yaml  --stack-name KnowledgeBase --capabilities CAPABILITY_NAMED_IAM
 ```
-Select one foundation model arn to use for your `EmbeddingModelArn` parameter.   
 
 **After Deployment**  
-Create the index on the OpenSearchServerless  vector store 
+1. Create the index on the OpenSearchServerless  vector store 
 ```bash
-
 
 ```
 
 1. Upload data to the S3 bucket and path for the data source 
 ```bash
 
-$ aws s3 cp s3://knowledge-base-storage-09-24/base-data
+$ aws s3 cp book.tx s3://knowledge-base-storage-09-24/base-data/
 ```
+This is the data ingestion.  
 
 2. Sync the data source to the newly created knowledge base to index the content for searching. 
 ```bash 
@@ -47,13 +52,17 @@ After deployment, use the RetrieveAndGenerate API to perform RAG queries:
 $ aws bedrock-agent-runtime retrieve-and-generate \
   --knowledge-base-id <KnowledgeBaseId> \
   --model-arn "arn:aws:bedrock:eu-west-2::foundation-model/anthropic.claude-v2" \
-  --retrieval-configuration '{"vectorSearchConfiguration": {"numberOfResults": 5}}' \
+  --retrieval-configuration file://retrival-config.json
   --text "Your query here"
 ```
 Note that the RetrieveAndGenerate API requires a generation model (separate from the embedding model) to synthesize answers from the retrieved content 
 
 **Cleanup**
+To delete the stacks
 
+```bash
+$ aws cloudformation delete-stack --stack-name KnowledgeBase
+```
 
 **Learn More**  
 A knowlege Base can be created with either
