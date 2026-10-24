@@ -50,16 +50,18 @@ $ aws bedrock-agent start-ingestion-job --knowledge-base-id 12GAJXHSAQ --data-so
 ```
 
 **Testing**
-After deployment, use the RetrieveAndGenerate API to perform RAG queries:
+1. First get the ARNs of the available list of foundation models
 ```bash
-$ aws bedrock-agent-runtime retrieve-and-generate \
-  --knowledge-base-id 12GAJXHSAQ \
-  --model-arn "arn:aws:bedrock:eu-west-2::foundation-model/anthropic.claude-v2" \
-  --retrieval-configuration file://retrival-config.json
-  --text "Your query here"
+$ aws bedrock list-foundation-models --query "modelSummaries[].[modelArn]" --output text > embedded-models.txt
+```
+We wil use the Clause Sonnect 4.6 as our generation model in the next step.  
+Search and copy the ARN for `claude-sonnet-4-6` from the output in `embedded-models.txt`
+2. After deployment, use the RetrieveAndGenerate API to perform RAG queries:
+```bash
+$ aws bedrock-agent-runtime retrieve-and-generate --retrieve-and-generate-configuration file://generation-config.json --input file://input.json --no-cli-pager
 ```
 Note that the RetrieveAndGenerate API requires a generation model (separate from the embedding model) to synthesize answers from the retrieved content.   
-The the above comment the generation model is represented by the value of the `model-arn` parameter.  
+The the above comment the generation model is represented by the value of the `model-arn` parameter.   
 
 **Testing in AWS Console**  
 It may be more useful and convinient to test using the BedRock Console.  

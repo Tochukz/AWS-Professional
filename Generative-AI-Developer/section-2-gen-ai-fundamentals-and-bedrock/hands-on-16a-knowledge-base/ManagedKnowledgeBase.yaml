@@ -90,7 +90,7 @@ Outputs:
   KnowledgeBaseArn:
     Description: Managed knowledge base ARN
     Value: !GetAtt ManagedKnowledgeBase.KnowledgeBaseArn
-  KnowledgeBaseIfdPlusDataSourceId:
+  KnowledgeBaseIdPlusDataSourceId:
     Description: KnowlegeBase ID and DataSource ID seperated by a pipe e.g xxxxxx|yyyyyy where the second segment is the DataSource ID
     Value: !Ref ManagedKnowledgeBaseDataSource
   ServiceRoleArn:

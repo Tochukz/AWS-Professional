@@ -1,5 +1,6 @@
 {
     "Version": "2012-10-17",
+    "Description": "1 of 2 policy for the knowledge base IAM role obtained from role created by the console"
     "Statement": [
         {
             "Sid": "CloudWatchWritePermissionStatement",

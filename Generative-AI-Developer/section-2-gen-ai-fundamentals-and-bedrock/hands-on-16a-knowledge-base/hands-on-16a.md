@@ -32,22 +32,14 @@ This is the data ingestion step.
 
 3. Sync the data source to the newly created knowledge base to index the content for searching. 
 ```bash 
-$ aws bedrock-agent start-ingestion-job --knowledge-base-id 12GAJXHSAQ --data-source-id QZCVSAU9GS
+$ aws bedrock-agent start-ingestion-job --knowledge-base-id EA7NSEIG9K --data-source-id CODMJGLFS8
 ```
 
 **Testing**
-1. First the ARNs of a list of functiontion models
-```bash 
-$ aws bedrock list-foundation-models --query "modelSummaries[].[modelArn]" --output text > embedded-models.txt
-```
-We wil use the Clause Sonnect 4.6 for as the generation model in the next step.  
-Search and copy the ARN for `claude-sonnet-4-6` from the output in `embedded-models.txt`
-2. After deployment, use the RetrieveAndGenerate API to perform RAG queries:
 ```bash
-$ aws bedrock-agent-runtime retrieve-and-generate --retrieve-and-generate-configuration file://generation-config.json --input file://input.json --no-cli-pager
-```
-Note that the RetrieveAndGenerate API requires a generation model (separate from the embedding model) to synthesize answers from the retrieved content.   
-The the above comment the generation model is represented by the value of the `model-arn` parameter.  
+$ pip install --upgrade boto3
+$ python3 agentic_retrieve.py <KnowledgeBaseId> "What are some steps to follow before deciding to become self-employed?"
+``` 
 
 **Testing in AWS Console**  
 It may be more useful and convinient to test using the BedRock Console.  
@@ -77,7 +69,7 @@ A knowlege Base can be created with either
 [Create a service role for Amazon Bedrock Knowledge Bases](https://docs.aws.amazon.com/bedrock/latest/userguide/kb-permissions.html)
 
 **Useful Commands**
-List Base Models ARN and IDS
+List Base Models ARN and IDs
 ```bash
 $ aws bedrock list-foundation-models --query "modelSummaries[].[modelArn, modelId]" --output table --region eu-west-2 --no-cli-pager
 ```
