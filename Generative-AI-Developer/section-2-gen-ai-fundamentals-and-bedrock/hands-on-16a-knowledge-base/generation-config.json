@@ -1,0 +1,7 @@
+{
+    "type": "KNOWLEDGE_BASE",
+    "knowledgeBaseConfiguration": {
+        "knowledgeBaseId": "12GAJXHSAQ",
+        "modelArn": "arn:aws:bedrock:eu-west-2::foundation-model/anthropic.claude-sonnet-4-6"
+    }
+}

@@ -1,0 +1,97 @@
+
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: This configuration provisions a Bedrock Managed Knowledge Base with S3 data source
+
+Transform: AWS::LanguageExtensions
+
+Parameters:
+  SourceBucketName:
+    Type: String
+    Description: Name of an existing S3 bucket containing documents
+    Default: chucks-workspace-storage
+  SourcePrefix:
+    Type: String
+    Default: data/book.txt 
+    Description: S3 prefix to include in the data source
+
+Resources:
+  KnowledgeBaseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SimpleKnowledgeBaseRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                AWS:SourceArn: !Sub
+                  "arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/*"
+      Policies:
+        - PolicyName: ReadSourceDocuments
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${SourceBucketName}"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${SourceBucketName}/${SourcePrefix}*"
+
+  ManagedKnowledgeBase:
+    Type: AWS::Bedrock::KnowledgeBase
+    Properties:
+      Name: SimpleKnowledgeBase
+      Description: Managed knowledge base for S3 documents
+      RoleArn: !GetAtt KnowledgeBaseRole.Arn
+      KnowledgeBaseConfiguration:
+        Type: MANAGED
+        ManagedKnowledgeBaseConfiguration:
+          EmbeddingModelType: MANAGED
+      Tags:
+        Application: MedicalDocuments
+
+  # S3 connector for the managed knowledge base
+  ManagedKnowledgeBaseDataSource:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      Name: SimpleDataSource
+      Description: S3 documents data source
+      KnowledgeBaseId: !Ref ManagedKnowledgeBase
+      DataDeletionPolicy: DELETE
+      DataSourceConfiguration:
+        Type: MANAGED_KNOWLEDGE_BASE_CONNECTOR
+        ManagedKnowledgeBaseConnectorConfiguration:
+          ConnectorParameters:
+            type: S3
+            version: '1'
+            connectionConfiguration:
+              bucketName: !Ref SourceBucketName
+              bucketOwnerAccountId: !Ref AWS::AccountId
+            filterConfiguration:
+              inclusionPrefixes:
+                - !Ref SourcePrefix
+          DeletionProtectionConfiguration:
+            DeletionProtectionStatus: DISABLED
+
+Outputs:
+  KnowledgeBaseId:
+    Description: Managed knowledge base ID
+    Value: !Ref ManagedKnowledgeBase
+  KnowledgeBaseArn:
+    Description: Managed knowledge base ARN
+    Value: !GetAtt ManagedKnowledgeBase.KnowledgeBaseArn
+  KnowledgeBaseIfdPlusDataSourceId:
+    Description: KnowlegeBase ID and DataSource ID seperated by a pipe e.g xxxxxx|yyyyyy where the second segment is the DataSource ID
+    Value: !Ref ManagedKnowledgeBaseDataSource
+  ServiceRoleArn:
+    Value: !GetAtt KnowledgeBaseRole.Arn

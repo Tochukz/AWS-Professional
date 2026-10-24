@@ -1,5 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
+Description: Configure AWS Knowlede base with it's underlying vector store 
+
 Parameters: 
   EmbeddingModelId:
     Type: String     
@@ -198,7 +200,7 @@ Resources:
         S3Configuration:
           BucketArn: !GetAtt StorageBucket.Arn
           InclusionPrefixes:
-            - base-data/
+            - data/book.txt
       VectorIngestionConfiguration:
         ChunkingConfiguration:
           ChunkingStrategy: FIXED_SIZE
